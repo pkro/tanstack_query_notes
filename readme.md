@@ -1,7 +1,27 @@
 # React query (tanstack query) notes
 
-<!-- START doctoc -->
-<!-- END doctoc -->
+<!-- TOC -->
+* [React query (tanstack query) notes](#react-query--tanstack-query--notes)
+  * [useQuery](#usequery)
+    * [status](#status)
+    * [Query keys](#query-keys)
+    * [fetching / refetching](#fetching--refetching)
+      * [refetch vs invalidateQueries](#refetch-vs-invalidatequeries)
+      * [staleTime](#staletime)
+      * [refetchInterval](#refetchinterval)
+    * [Dependent queries](#dependent-queries)
+  * [useMutation](#usemutation)
+    * [Basic form setup](#basic-form-setup)
+    * [options](#options)
+    * [Optimistic updates](#optimistic-updates)
+    * [mutate / mutateAsync](#mutate--mutateasync)
+  * [Pagination](#pagination)
+  * [Infinite queries](#infinite-queries)
+  * [Other features](#other-features)
+    * [useQueries](#usequeries)
+    * [Prefetching](#prefetching)
+    * [Initial / placeholder data](#initial--placeholder-data)
+<!-- TOC -->
 
 ## useQuery
 
