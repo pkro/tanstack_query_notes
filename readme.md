@@ -183,9 +183,25 @@ export const CreatePost = ({setCurrentPage}: CreatePostPropsType) => {
 
 https://tanstack.com/query/v4/docs/react/guides/optimistic-updates
 
-We can use update data in the frontend so it doesn't have to be reloaded by updating the cache using `queryClient.setQueryData`:
+We can use update data in the frontend so it doesn't have to be reloaded by updating the cache using `queryClient.setQueryData` in `onSuccess`.
 
+`setQueryData` can take the data itself:
 
+```tsx
+// ...
+    onSuccess: (data, variables, context) => {
+      queryClient.setQueryData(['posts', data.id], data);
+      queryClient.invalidateQueries(['posts']);
+      setCurrentPage(<Post id={data.id}/>);
+    },
+// ...
+```
+
+...or an updater function as an argument to change an existing entry:
+
+```tsx
+queryClient.setQueryData(['posts', data.id], (oldData) => ({...oldData, ...data}));
+```
 
 
 ### mutate / mutateAsync
@@ -194,3 +210,121 @@ Beside `mutate` rq also provides `mutateAsync` returns a promise that can be cha
 
 Both can also take `onSuccess` etc. properties in an object as the second parameter, e.g. `.mutate(data, {onSuccess: ()=>..., }`)
 
+## Pagination
+
+The data fetching function:
+
+```tsx
+export function getPostsPaginated(page: number) {
+    return axios
+        .get("http://localhost:3000/posts", {
+            params: { _page: page, _sort: "title", _limit: 2 },
+        })
+        .then(res => {
+            // @ts-ignore
+            const hasNext = page * 2 <= parseInt(res.headers["x-total-count"])
+            return {
+                nextPage: hasNext ? page + 1 : undefined,
+                previousPage: page > 1 ? page - 1 : undefined,
+                posts: res.data,
+            }
+        })
+}
+```
+
+The paginated page:
+
+```tsx
+function PostsListPaginated() {
+    const [page, setPage] = useState<number | undefined>(1);
+
+    // using destructured properties just to mix things up a bit
+    const {status, error, data, isPreviousData} = useQuery({
+        queryKey: ['posts', {page: page}],
+        keepPreviousData: true, // show previous pages data while loading new data
+        queryFn: ()=>getPostsPaginated(page!)
+    });
+
+    if (status === 'loading') return <h1>loading...</h1>;
+    if (status === 'error') return <pre>{JSON.stringify(error)}</pre>;
+
+    return (
+        <>
+            <h1>Post list Paginated</h1>
+            <small>{isPreviousData && "Previous Data"}</small>
+            <ul>
+                {data.posts.map((post: Post) => <li key={post.id}>{post.id}: {post.title}</li>)}
+            </ul>
+            <div>
+                {data?.previousPage && (<button onClick={()=>setPage(data?.previousPage)}>Previous</button>)}
+                {data?.nextPage && (<button onClick={()=>setPage(data?.nextPage)}>Next</button>)}
+            </div>
+        </>
+    );
+}
+```
+
+## Infinite queries
+
+uses `useInfiniteQuery` requiring a `getNextPageParam` option.
+
+See code, `PostListsInfinite.tsx`.
+
+## Other features
+
+### useQueries
+
+The problem: `useQuery` can't be used in a hook. So we can't use it to iterate over the result in another query, as [hooks can't be called  inside loops, conditions, or nested functions](https://reactjs.org/docs/hooks-rules.html).
+
+Solution: `useQueries` which can be used at the top level and pass in options for multiple queries:
+
+```typescript
+    const postsQuery = useQuery({
+        queryKey: ['posts'],
+        queryFn: getPosts
+    });
+
+    // we're just getting the posts here again but we might load other
+    // related data for each post
+    const queries = useQueries({
+        // return empty array while we don't have any data (yet)
+        queries: (postsQuery?.data?? []).map((post: Post) => {
+            return {
+                queryKey: ['posts', post.id],
+                queryFn: () => getPost(post.id)
+            };
+        })
+    });
+
+    console.log(queries.map(q => q.data));
+```
+
+### Prefetching
+
+Self explanatory code:
+
+```tsx
+    const queryClient = useQueryClient();
+
+    function onHoverPostLink(postId: any) {
+        queryClient.prefetchQuery(
+            {
+                queryKey: ['posts', postId],
+                queryFn: ()=>getPost(postId)
+            }
+        );
+    }
+
+    // ...
+
+    <button
+            onClick={() => setCurrentPage(<Post id={1}/>)}
+            onMouseEnter={() => onHoverPostLink(1)}>
+      1st post
+    </button>
+```
+
+### Initial / placeholder data
+
+- `initialData` sets initial data that is regarded as valid, so no fetch is done (until rq would refetch anyway)
+- `placeholderData` sets initial data until the "real" data is fetched

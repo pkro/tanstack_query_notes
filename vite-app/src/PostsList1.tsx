@@ -1,13 +1,16 @@
 import './App.css';
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {getPosts} from "./api/posts";
+import {useMutation, useQueries, useQuery, useQueryClient} from "@tanstack/react-query";
+import {getPost, getPosts} from "./api/posts";
 import { Key, ReactElement, JSXElementConstructor, ReactFragment, ReactPortal } from 'react';
 import {Post} from "./types";
 
 function PostsList1() {
     const postsQuery = useQuery({
         queryKey: ['posts'],
-        queryFn: getPosts
+        queryFn: getPosts,
+        placeholderData: [
+            {id: '123', title: 'Loading real posts'}
+        ]
     });
 
 

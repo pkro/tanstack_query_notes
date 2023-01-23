@@ -10,7 +10,7 @@ type CreatePostPropsType = {
 export const CreatePost = ({setCurrentPage}: CreatePostPropsType) => {
     const titleRef = useRef<HTMLInputElement>(null);
     const bodyRef = useRef<HTMLTextAreaElement>(null);
-
+const queryClient = useQueryClient();
     const createPostMutation = useMutation({
         mutationFn: createPost,
         onError: (error) => console.log("create failed"),
@@ -24,7 +24,8 @@ export const CreatePost = ({setCurrentPage}: CreatePostPropsType) => {
         onSuccess: (data, variables, context) => {
             console.log(`create successful, context: ${JSON.stringify(context)}`);
             // reload data
-            useQueryClient().invalidateQueries(['posts'])
+            queryClient.setQueryData(['posts', data.id], data);
+            queryClient.invalidateQueries(['posts']);
             setCurrentPage(<Post id={data.id} />)
         },
     });
